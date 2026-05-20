@@ -65,7 +65,7 @@
       const sy=vh*(CROP_Y_PERCENT/100);
       const sh=vh-sy;
       const aspect=vw/sh;
-      const outW=720;
+      const outW=1440;
       const oneH=Math.round(outW/aspect);
       canvas.width=outW;
       canvas.height=oneH*2;
@@ -147,8 +147,10 @@
       setupCanvas();
       drawFrame();
 
-      const stream=canvas.captureStream(30);
-      recorder=new MediaRecorder(stream,{mimeType:'video/webm'});
+      const stream=canvas.captureStream(60);
+      recorder=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp9',
+  videoBitsPerSecond: 20000000
+});
       recorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
       recorder.onstop=()=>{
         const blob=new Blob(chunks,{type:'video/webm'});
