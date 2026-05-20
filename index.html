@@ -4,206 +4,150 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Video Crop Join Tool</title>
+  <title>上下鏡像拼接工具</title>
   <style>
-    :root{--bg:#0f1117;--panel:#171b23;--panel2:#1e2430;--border:#2a3242;--text:#eef2ff;--muted:#9aa4bd;--green:#10b981;--blue:#3b82f6;--red:#ef4444}
+    :root{--bg:#0f1117;--panel:#171b23;--panel2:#1e2430;--border:#2a3242;--text:#eef2ff;--muted:#9aa4bd;--green:#10b981;--blue:#3b82f6}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-    .wrap{max-width:1200px;margin:0 auto;padding:14px;display:grid;gap:14px}
-    .panel{background:var(--panel);border:1px solid var(--border);padding:12px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .controls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
-    label{font-size:12px;color:var(--muted);display:grid;gap:4px}
-    input,select,button{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px;font-size:14px}
-    input[type="checkbox"]{width:22px;height:22px;justify-self:center}
-    button{cursor:pointer;font-weight:800}.primary{background:var(--blue)}.success{background:var(--green)}.danger{background:var(--red)}
+    .wrap{max-width:900px;margin:0 auto;padding:14px;display:grid;gap:14px}
+    .panel{background:var(--panel);border:1px solid var(--border);padding:12px;display:grid;gap:12px}
+    label{font-size:14px;color:var(--muted);display:grid;gap:8px}
+    input,button{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:12px;font-size:16px}
+    button{cursor:pointer;font-weight:800}.primary{background:var(--blue)}.success{background:var(--green)}
     video,canvas{width:100%;background:#000;display:block;border:1px solid var(--border)}
-    .preview-wrap{display:grid;gap:10px}.topbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.topbar > *{flex:1}.small{font-size:12px;color:var(--muted);line-height:1.5}.out{display:grid;gap:10px}.hidden{display:none}
-    @media(max-width:850px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:repeat(2,1fr)}}
+    .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .small{font-size:12px;color:var(--muted);line-height:1.6}
+    .hidden{display:none}
+    a{display:block;text-align:center;background:var(--green);color:white;text-decoration:none;padding:12px;font-weight:800;border:1px solid var(--border)}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="panel topbar">
-      <label>影片 A<input id="fileA" type="file" accept="video/*"></label>
-      <label>影片 B<input id="fileB" type="file" accept="video/*"></label>
-      <label>拼接方向
-        <select id="mode">
-          <option value="horizontal">左右拼接</option>
-          <option value="vertical">上下拼接</option>
-        </select>
+    <div class="panel">
+      <label>選擇影片
+        <input id="file" type="file" accept="video/*">
       </label>
-      <label>輸出 FPS<input id="fps" type="number" min="10" max="60" value="30"></label>
-    </div><div class="grid">
-  <div class="panel">
-    <div class="preview-wrap">
-      <video id="videoA" controls muted playsinline preload="auto"></video>
-      <div class="controls">
-        <label>X %<input id="ax" type="number" value="0" min="0" max="100"></label>
-        <label>Y %<input id="ay" type="number" value="0" min="0" max="100"></label>
-        <label>寬 %<input id="aw" type="number" value="100" min="1" max="100"></label>
-        <label>高 %<input id="ah" type="number" value="100" min="1" max="100"></label>
-        <label>左右鏡像<input id="afh" type="checkbox"></label>
-        <label>上下鏡像<input id="afv" type="checkbox"></label>
-      </div>
-    </div>
+      <video id="video" controls muted playsinline preload="auto"></video>
+    </div><div class="panel">
+  <div class="buttons">
+    <button id="preview" class="primary">播放預覽</button>
+    <button id="export" class="success">一鍵匯出 WebM</button>
   </div>
-
-  <div class="panel">
-    <div class="preview-wrap">
-      <video id="videoB" controls muted playsinline preload="auto"></video>
-      <div class="controls">
-        <label>X %<input id="bx" type="number" value="0" min="0" max="100"></label>
-        <label>Y %<input id="by" type="number" value="0" min="0" max="100"></label>
-        <label>寬 %<input id="bw" type="number" value="100" min="1" max="100"></label>
-        <label>高 %<input id="bh" type="number" value="100" min="1" max="100"></label>
-        <label>左右鏡像<input id="bfh" type="checkbox"></label>
-        <label>上下鏡像<input id="bfv" type="checkbox"></label>
-      </div>
-    </div>
+  <canvas id="canvas" width="720" height="1280"></canvas>
+  <a id="download" class="hidden" download="mirror-stack.webm">下載匯出的影片</a>
+  <div class="small">
+    固定處理方式：同一影片上下拼接。上方片段會左右鏡像＋上下鏡像；下方片段保持原樣。兩段都固定裁掉上方 7.66%，其餘保留。
   </div>
-</div>
-
-<div class="panel out">
-  <div class="topbar">
-    <button id="playPreview" class="primary">播放預覽</button>
-    <button id="stopPreview">停止預覽</button>
-    <button id="record" class="success">一鍵匯出 WebM</button>
-  </div>
-  <canvas id="canvas" width="1280" height="720"></canvas>
-  <a id="download" class="hidden" download="joined-video.webm">下載匯出的影片</a>
-  <div class="small">現在使用穩定版讀取流程：裁切只會依照 X / Y / 寬 / 高 處理，不會額外偷裁畫面；若比例不合，會用黑邊補齊，不會拉伸。</div>
 </div>
 
   </div>  <script>
-    const $=id=>document.getElementById(id);
-    const videoA=$('videoA'), videoB=$('videoB'), canvas=$('canvas'), ctx=canvas.getContext('2d');
-    const download=$('download');
-    let raf=null, recorder=null, chunks=[];
+    const file=document.getElementById('file');
+    const video=document.getElementById('video');
+    const canvas=document.getElementById('canvas');
+    const ctx=canvas.getContext('2d');
+    const download=document.getElementById('download');
+    const previewBtn=document.getElementById('preview');
+    const exportBtn=document.getElementById('export');
 
-    function loadVideo(fileInput, video){
-      fileInput.addEventListener('change',()=>{
-        const file=fileInput.files && fileInput.files[0];
-        if(!file) return;
-        if(video.dataset.url) URL.revokeObjectURL(video.dataset.url);
-        const url=URL.createObjectURL(file);
-        video.dataset.url=url;
-        video.src=url;
-        video.load();
-        video.onloadeddata=()=>drawOnce();
-        video.onloadedmetadata=()=>drawOnce();
-      });
-    }
-    loadVideo($('fileA'),videoA);
-    loadVideo($('fileB'),videoB);
+    const CROP_Y_PERCENT=7.66;
+    let raf=null;
+    let recorder=null;
+    let chunks=[];
 
-    function getCrop(prefix, video){
-      const vw=video.videoWidth || 1;
-      const vh=video.videoHeight || 1;
-      let x=Number($(prefix+'x').value)/100;
-      let y=Number($(prefix+'y').value)/100;
-      let w=Number($(prefix+'w').value)/100;
-      let h=Number($(prefix+'h').value)/100;
-      x=Math.max(0,Math.min(0.99,x));
-      y=Math.max(0,Math.min(0.99,y));
-      w=Math.max(0.01,Math.min(1-x,w));
-      h=Math.max(0.01,Math.min(1-y,h));
-      return {sx:x*vw, sy:y*vh, sw:w*vw, sh:h*vh};
+    function stopLoop(){
+      if(raf) cancelAnimationFrame(raf);
+      raf=null;
     }
 
     function setupCanvas(){
-      const mode=$('mode').value;
-      if(mode==='horizontal'){
-        canvas.width=1280;
-        canvas.height=720;
-      }else{
-        canvas.width=720;
-        canvas.height=1280;
-      }
+      const vw=video.videoWidth || 1280;
+      const vh=video.videoHeight || 720;
+      const sy=vh*(CROP_Y_PERCENT/100);
+      const sh=vh-sy;
+      const aspect=vw/sh;
+      const outW=720;
+      const oneH=Math.round(outW/aspect);
+      canvas.width=outW;
+      canvas.height=oneH*2;
     }
 
-    function drawVideoContain(video,crop,dx,dy,dw,dh,flipH,flipV){
-      if(video.readyState<2) return;
-      const sourceAspect=crop.sw/crop.sh;
-      const destAspect=dw/dh;
-      let outW=dw, outH=dh, ox=0, oy=0;
-      if(sourceAspect>destAspect){
-        outW=dw;
-        outH=dw/sourceAspect;
-        oy=(dh-outH)/2;
-      }else{
-        outH=dh;
-        outW=dh*sourceAspect;
-        ox=(dw-outW)/2;
-      }
+    function drawSegment(flip){
+      const vw=video.videoWidth || 1;
+      const vh=video.videoHeight || 1;
+      const sy=vh*(CROP_Y_PERCENT/100);
+      const sh=vh-sy;
+      const w=canvas.width;
+      const h=canvas.height/2;
+      const y=flip ? 0 : h;
+
       ctx.save();
       ctx.beginPath();
-      ctx.rect(dx,dy,dw,dh);
+      ctx.rect(0,y,w,h);
       ctx.clip();
-      ctx.translate(dx+ox+(flipH?outW:0), dy+oy+(flipV?outH:0));
-      ctx.scale(flipH?-1:1, flipV?-1:1);
-      ctx.drawImage(video, crop.sx,crop.sy,crop.sw,crop.sh, 0,0,outW,outH);
+
+      if(flip){
+        ctx.translate(w,h);
+        ctx.scale(-1,-1);
+        ctx.drawImage(video,0,sy,vw,sh,0,0,w,h);
+      }else{
+        ctx.drawImage(video,0,sy,vw,sh,0,y,w,h);
+      }
+
       ctx.restore();
     }
 
     function drawFrame(){
       setupCanvas();
-      ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle='#000';
       ctx.fillRect(0,0,canvas.width,canvas.height);
-      const mode=$('mode').value;
-      const ca=getCrop('a',videoA), cb=getCrop('b',videoB);
-      if(mode==='horizontal'){
-        drawVideoContain(videoA, ca, 0,0,canvas.width/2,canvas.height, $('afh').checked, $('afv').checked);
-        drawVideoContain(videoB, cb, canvas.width/2,0,canvas.width/2,canvas.height, $('bfh').checked, $('bfv').checked);
-      }else{
-        drawVideoContain(videoA, ca, 0,0,canvas.width,canvas.height/2, $('afh').checked, $('afv').checked);
-        drawVideoContain(videoB, cb, 0,canvas.height/2,canvas.width,canvas.height/2, $('bfh').checked, $('bfv').checked);
+      if(video.readyState>=2){
+        drawSegment(true);
+        drawSegment(false);
       }
     }
 
-    function draw(){
+    function loop(){
       drawFrame();
-      raf=requestAnimationFrame(draw);
+      raf=requestAnimationFrame(loop);
     }
 
-    function drawOnce(){
-      cancelAnimationFrame(raf);
-      drawFrame();
-    }
+    file.addEventListener('change',()=>{
+      const selected=file.files && file.files[0];
+      if(!selected) return;
+      if(video.dataset.url) URL.revokeObjectURL(video.dataset.url);
+      const url=URL.createObjectURL(selected);
+      video.dataset.url=url;
+      video.src=url;
+      video.load();
+      download.classList.add('hidden');
+      video.onloadedmetadata=()=>{
+        try{ video.currentTime=0.05; }catch(e){}
+        drawFrame();
+      };
+      video.onloadeddata=()=>drawFrame();
+      video.onerror=()=>alert('影片讀取失敗：瀏覽器可能不支援這個影片編碼');
+    });
 
-    async function playBoth(){
-      videoA.currentTime=0;
-      videoB.currentTime=0;
-      await Promise.allSettled([videoA.play(),videoB.play()]);
-      cancelAnimationFrame(raf);
-      draw();
-    }
+    previewBtn.addEventListener('click',async()=>{
+      if(!video.src){ alert('請先選擇影片'); return; }
+      video.currentTime=0;
+      stopLoop();
+      await video.play().catch(()=>{});
+      loop();
+    });
 
-    function stopBoth(){
-      videoA.pause();
-      videoB.pause();
-      cancelAnimationFrame(raf);
-      raf=null;
-      drawOnce();
-    }
-
-    $('playPreview').addEventListener('click',playBoth);
-    $('stopPreview').addEventListener('click',stopBoth);
-
-    $('record').addEventListener('click',async()=>{
-      if(!videoA.src || !videoB.src){
-        alert('請先上傳兩個影片');
-        return;
-      }
+    exportBtn.addEventListener('click',async()=>{
+      if(!video.src){ alert('請先選擇影片'); return; }
       download.classList.add('hidden');
       download.removeAttribute('href');
       chunks=[];
+      stopLoop();
+      video.pause();
+      video.currentTime=0;
       setupCanvas();
-      drawOnce();
+      drawFrame();
 
-      const fps=Math.max(10,Math.min(60,Number($('fps').value)||30));
-      const stream=canvas.captureStream(fps);
+      const stream=canvas.captureStream(30);
       recorder=new MediaRecorder(stream,{mimeType:'video/webm'});
       recorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
       recorder.onstop=()=>{
@@ -213,24 +157,20 @@
         download.textContent='下載匯出的影片';
       };
 
-      videoA.pause(); videoB.pause();
-      videoA.currentTime=0; videoB.currentTime=0;
       recorder.start();
-      await Promise.allSettled([videoA.play(),videoB.play()]);
-      cancelAnimationFrame(raf);
-      draw();
+      await video.play().catch(()=>{});
+      loop();
 
-      const dA=isFinite(videoA.duration)?videoA.duration:0;
-      const dB=isFinite(videoB.duration)?videoB.duration:0;
-      const minDuration=Math.max(0.1, Math.min(dA||999999,dB||999999));
+      const duration=isFinite(video.duration) ? video.duration : 0;
       setTimeout(()=>{
         if(recorder && recorder.state!=='inactive') recorder.stop();
-        stopBoth();
-      }, minDuration*1000);
+        video.pause();
+        stopLoop();
+        drawFrame();
+      }, Math.max(0.1,duration)*1000);
     });
 
-    ['ax','ay','aw','ah','afh','afv','bx','by','bw','bh','bfh','bfv','mode'].forEach(id=>$(id).addEventListener('input',drawOnce));
     setupCanvas();
-    drawOnce();
+    drawFrame();
   </script></body>
 </html>
