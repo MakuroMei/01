@@ -1,244 +1,402 @@
-<!DOCTYPE html><html lang="zh-Hant">
+<!DOCTYPE html>
+<html lang="zh-Hant">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>顏色挑選器</title>
-<style>
-  :root{
-    --base:#1a1a1d;
-    --bg:#111113;
-    --panel:#1a1a1d;
-    --panel2:#232328;
-    --text:#f4f4f5;
-    --muted:#a1a1aa;
-    --border:#33333a;
-    --shadow:0 14px 36px rgba(0,0,0,.35);
-    --radius:18px;
-  }*{box-sizing:border-box} html,body{height:100%} body{ margin:0; background:radial-gradient(900px 500px at 50% -160px,#2b2b31 0%,var(--bg) 58%,#0d0d0f 100%); color:var(--text); font:16px/1.5 ui-sans-serif,-apple-system,"Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",Arial; }
-
-.wrap{max-width:520px;margin:24px auto 80px;padding:0 16px} .panel{ background:var(--panel); border:1px solid var(--border); border-radius:24px; box-shadow:var(--shadow); overflow:hidden; }
-
-header{text-align:center;padding:18px 16px 8px} .title{font-weight:900;letter-spacing:.4px;font-size:20px}
-
-.section{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 16px 22px}
-
-.preview{ width:220px; height:120px; border-radius:18px; border:1px solid var(--border); box-shadow:var(--shadow); background:#85875d; }
-
-.sv-wrap{position:relative;width:280px;height:180px;touch-action:none} #sv{ width:100%;height:100%;display:block; border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow); background:#fff; } .sv-cursor{ position:absolute;width:20px;height:20px; border-radius:999px; border:3px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,.45); pointer-events:none; transform:translate(-10px,-10px); }
-
-.hue-wrap{width:280px;height:28px;display:flex;align-items:center} #hue{ appearance:none;-webkit-appearance:none; width:100%;height:16px; border-radius:999px; outline:none; border:1px solid var(--border); background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); box-shadow:var(--shadow); } #hue::-webkit-slider-thumb{ -webkit-appearance:none;appearance:none; width:24px;height:24px;border-radius:999px; background:#fff;border:2px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,.45); } #hue::-moz-range-thumb{ width:24px;height:24px;border-radius:999px; background:#fff;border:2px solid #fff; box-shadow:0 0 0 2px rgba(0,0,0,.45); }
-
-.hex-box{width:280px;display:grid;gap:8px} .hex-label{color:var(--muted);font-size:13px;font-weight:700;text-align:center} #hexInput{ width:100%; background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:14px; padding:12px 14px; text-align:center; font-size:20px; font-weight:900; letter-spacing:.08em; outline:none; text-transform:uppercase; } #hexInput:focus{border-color:#71717a}
-
-.btn{ appearance:none; border:1px solid var(--border); border-radius:16px; padding:12px 18px; font-weight:900; color:var(--text); background:linear-gradient(180deg,#2f2f35,#232328); box-shadow:var(--shadow); cursor:pointer; } .btn:active{transform:translateY(1px)}
-
-.toast{ position:fixed;left:50%;bottom:18px; transform:translateX(-50%); background:#f4f4f5;color:#111113; padding:8px 12px;border-radius:999px; opacity:0;pointer-events:none;transition:.2s; font-weight:800; } .toast.show{opacity:1}
-
-@media(max-width:360px){ .sv-wrap,.hue-wrap,.hex-box{width:240px} .sv-wrap{height:160px} .preview{width:200px;height:110px} } </style>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>HTML / ZIP 專案運行器 v4</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg:#101014; --panel:#1f1f27; --panel2:#2b2b35; --text:#f7f7fb; --muted:#aaaabb;
+      --primary:#6c63ff; --ok:#00c853; --danger:#ff5252; --warn:#ff9800; --blue:#448aff;
+      --radius:18px;
+    }
+    html, body { margin:0; width:100%; height:100%; overflow:hidden; font-family: Arial, "Noto Sans TC", sans-serif; background:var(--bg); color:var(--text); }
+    #app { width:100vw; height:100dvh; height:100svh; position:relative; overflow:hidden; }
+    iframe { display:block; width:100%; height:100%; border:none; background:white; }
+    button, label, select { font-family:inherit; }
+    .floating { position:fixed; z-index:10; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .bottom-right { right:14px; bottom:calc(14px + env(safe-area-inset-bottom)); justify-content:flex-end; }
+    .top-right { right:12px; top:12px; }
+    .pill-btn, .toolbar button, .toolbar label {
+      border:none; border-radius:999px; padding:11px 15px; cursor:pointer; color:white; font-size:16px;
+      user-select:none; box-shadow:0 8px 24px rgba(0,0,0,.28); transition:.15s transform, .15s opacity;
+    }
+    .pill-btn:active, .toolbar button:active, .toolbar label:active { transform:scale(.97); }
+    .edit-btn { background:var(--primary); font-size:16px; padding:13px 19px; }
+    .ghost { background:rgba(0,0,0,.55); backdrop-filter:blur(10px); }
+    .status { position:fixed; left:12px; top:12px; max-width:calc(100vw - 24px); padding:8px 12px; border-radius:999px; background:rgba(0,0,0,.68); color:#fff; font-size:13px; z-index:12; backdrop-filter:blur(8px); display:none; }
+    .drop-hint { position:fixed; inset:14px; border:3px dashed rgba(255,255,255,.55); border-radius:24px; background:rgba(0,0,0,.62); display:none; place-items:center; z-index:30; font-size:22px; text-align:center; padding:20px; backdrop-filter:blur(8px); }
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.68); justify-content:center; align-items:center; z-index:20; padding:10px; }
+    .editor-window { width:min(1200px,96vw); height:93dvh; background:var(--panel); border-radius:var(--radius); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.55); display:flex; flex-direction:column; border:1px solid rgba(255,255,255,.08); }
+    .toolbar { padding:10px; background:var(--panel2); display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+    .toolbar-left, .toolbar-right { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .toolbar button, .toolbar label { border-radius:10px; padding:10px 13px; box-shadow:none; }
+    .run { background:var(--ok); } .clear { background:var(--danger); } .paste { background:var(--blue); } .close { background:#555; } .zip { background:var(--warn); } .sample { background:#7e57c2; } .save { background:#0097a7; } .file { background:#5c6bc0; }
+    input[type=file] { display:none; }
+    .editor-main { flex:1; min-height:0; display:grid; grid-template-rows:1fr auto; }
+    textarea { width:100%; height:100%; border:none; resize:none; outline:none; padding:16px; background:#111; color:#00ff88; font-size:16px; line-height:1.55; font-family:Consolas, Menlo, monospace; overflow:auto; tab-size:2; }
+    .info-bar { min-height:34px; padding:7px 12px; background:#17171d; color:var(--muted); font-size:12px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,.06); }
+    .console { position:fixed; left:12px; right:12px; bottom:calc(72px + env(safe-area-inset-bottom)); max-height:34dvh; overflow:auto; background:rgba(20,20,26,.94); color:#eee; border:1px solid rgba(255,255,255,.1); border-radius:16px; z-index:14; display:none; box-shadow:0 12px 35px rgba(0,0,0,.4); backdrop-filter:blur(10px); }
+    .console header { position:sticky; top:0; background:#24242d; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .console header strong { font-size:13px; }
+    .console header button { border:none; color:white; background:#444; border-radius:8px; padding:6px 9px; }
+    .log-line { padding:7px 10px; border-top:1px solid rgba(255,255,255,.06); font:12px/1.45 Consolas, Menlo, monospace; white-space:pre-wrap; word-break:break-word; }
+    .log-error { color:#ff8a80; } .log-warn { color:#ffd180; } .log-info { color:#80d8ff; }
+    .toggle { display:flex; align-items:center; gap:6px; color:#ddd; font-size:13px; padding:0 6px; }
+    .toggle input { accent-color:var(--primary); }
+    @media (max-width:700px){
+      .top-right { display:none; }
+      .editor-window { width:100vw; height:100dvh; border-radius:0; }
+      .toolbar { justify-content:flex-start; }
+      .toolbar button, .toolbar label { padding:9px 10px; font-size:13px; }
+      textarea { font-size:13px; }
+      .console { bottom:calc(68px + env(safe-area-inset-bottom)); }
+    }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="panel">
-      <header>
-        <div class="title">顏色挑選器</div>
-      </header><section class="section">
-    <div id="preview" class="preview" aria-label="預覽色塊"></div>
-
-    <div class="sv-wrap" id="svWrap" aria-label="彩度與明度調整方塊">
-      <canvas id="sv"></canvas>
-      <div id="svCursor" class="sv-cursor" aria-hidden="true"></div>
-    </div>
-
-    <div class="hue-wrap">
-      <input id="hue" type="range" min="0" max="360" value="63" aria-label="色相">
-    </div>
-
-    <div class="hex-box">
-      <div class="hex-label">HEX</div>
-      <input id="hexInput" value="#85875D" maxlength="7" spellcheck="false" aria-label="HEX 顏色輸入">
-    </div>
-
-    <button id="random" class="btn">隨機顏色</button>
-  </section>
+<div id="app">
+  <iframe id="preview" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+  <div class="status" id="status"></div>
+  <div class="floating top-right">
+    <button class="pill-btn ghost" onclick="toggleConsole()">🧾 Console</button>
+    <button class="pill-btn ghost" onclick="openPreviewWindow()">↗️ 新視窗</button>
+    <button class="pill-btn ghost" onclick="toggleFullscreen()">⛶ 全螢幕</button>
+  </div>
+  <div class="floating bottom-right">
+    <button class="pill-btn edit-btn" onclick="openEditor()">✏️ 編輯 / ZIP</button>
+  </div>
 </div>
 
-  </div>  <div id="toast" class="toast" role="status" aria-live="polite">HEX 格式錯誤</div><script>
+<div class="drop-hint" id="dropHint">把 ZIP 或 HTML 丟進來<br>我來跑，別客氣 😎</div>
+
+<div class="console" id="consoleBox">
+  <header>
+    <strong>Console / 錯誤訊息</strong>
+    <div>
+      <button onclick="clearConsole()">清空</button>
+      <button onclick="toggleConsole(false)">關閉</button>
+    </div>
+  </header>
+  <div id="consoleLines"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="editor-window">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <label class="zip" for="zipInput">上傳 ZIP</label>
+        <input id="zipInput" type="file" accept=".zip,application/zip" />
+        <label class="file" for="htmlInput">開啟 HTML</label>
+        <input id="htmlInput" type="file" accept=".html,.htm,text/html" />
+        <button class="paste" onclick="pasteCode()">貼上</button>
+        <button class="save" onclick="downloadHtml()">下載 HTML</button>
+        <button class="sample" onclick="resetSample()">範例</button>
+      </div>
+      <div class="toolbar-right">
+        <label class="toggle"><input type="checkbox" id="autoRun">自動預覽</label>
+        <button class="clear" onclick="clearCode()">清空</button>
+        <button class="run" onclick="runSingleFile()">運行</button>
+        <button class="close" onclick="closeEditor()">關閉</button>
+      </div>
+    </div>
+    <div class="editor-main">
+<textarea id="code" spellcheck="false"></textarea>
+      <div class="info-bar">
+        <span id="editorInfo">快捷鍵：Ctrl/⌘ + Enter 運行，Ctrl/⌘ + S 下載，Tab 可縮排</span>
+        <span id="fileInfo">單檔模式</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+  const preview = document.getElementById('preview');
+  const code = document.getElementById('code');
+  const overlay = document.getElementById('overlay');
+  const statusBox = document.getElementById('status');
+  const zipInput = document.getElementById('zipInput');
+  const htmlInput = document.getElementById('htmlInput');
+  const autoRun = document.getElementById('autoRun');
+  const consoleBox = document.getElementById('consoleBox');
+  const consoleLines = document.getElementById('consoleLines');
+  const fileInfo = document.getElementById('fileInfo');
+  const dropHint = document.getElementById('dropHint');
+  let activeObjectUrls = [];
+  let lastRenderedHtml = '';
+  const STORAGE_KEY = 'html_zip_runner_v4_code';
+  const AUTO_KEY = 'html_zip_runner_v4_autorun';
+
+  const sampleCode = `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>測試頁面</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 80px 20px; }
+    button { padding: 14px 24px; font-size: 18px; border-radius: 12px; border: 0; }
+  </style>
+</head>
+<body>
+  <h1>Hello World 😎</h1>
+  <p>單檔 HTML 模式正常。現在還會抓 console 與錯誤。</p>
+  <button onclick="console.log('按鈕被點了'); alert('成功！')">測試按鈕</button>
+</body>
+</html>`;
+
+  code.value = localStorage.getItem(STORAGE_KEY) || sampleCode;
+  autoRun.checked = localStorage.getItem(AUTO_KEY) === '1';
+
+  function showStatus(text, ms = 2800) {
+    statusBox.textContent = text;
+    statusBox.style.display = 'block';
+    clearTimeout(showStatus.timer);
+    showStatus.timer = setTimeout(() => statusBox.style.display = 'none', ms);
+  }
+
+  function openEditor(){ overlay.style.display = 'flex'; updateInfo(); }
+  function closeEditor(){ overlay.style.display = 'none'; }
+  function clearCode(){
+    if(confirm('確定要清空目前程式碼嗎？此動作無法復原。')){
+      code.value = '';
+      localStorage.removeItem('runner_draft');
+    }
+  }
+  function resetSample(){ code.value = sampleCode; saveDraft(); updateInfo(); showStatus('已放回範例碼'); }
+
+  async function pasteCode(){
+    try { code.value = await navigator.clipboard.readText(); saveDraft(); updateInfo(); showStatus('已貼上剪貼簿內容'); }
+    catch { alert('瀏覽器不允許直接讀取剪貼簿，請手動貼上 😅'); }
+  }
+
+  function saveDraft(){ localStorage.setItem(STORAGE_KEY, code.value); }
+  function updateInfo(){
+    const lines = code.value.split('\n').length;
+    const chars = code.value.length;
+    document.getElementById('editorInfo').textContent = `行數：${lines}｜字數：${chars}｜Ctrl/⌘+Enter 運行｜Ctrl/⌘+S 下載`;
+  }
+
+  function revokeOldUrls(){
+    activeObjectUrls.forEach(url => URL.revokeObjectURL(url));
+    activeObjectUrls = [];
+  }
+
+  function escapeClosingScript(html){ return html.replace(/<\/script/gi, '<\\/script'); }
+
+  function injectConsoleBridge(html){
+    const bridge = `<script>
 (function(){
-  const $=s=>document.querySelector(s);
-  const hsv={h:0,s:0,v:1};
-
-  const sv=$('#sv');
-  const svWrap=$('#svWrap');
-  const svCursor=$('#svCursor');
-  const hue=$('#hue');
-  const preview=$('#preview');
-  const hexInput=$('#hexInput');
-  const toast=$('#toast');
-
-  function clamp(n,min,max){return Math.min(max,Math.max(min,n));}
-
-  function hsvToRgb(h,s,v){
-    const c=v*s;
-    const x=c*(1-Math.abs((h/60)%2-1));
-    const m=v-c;
-    let r=0,g=0,b=0;
-    if(0<=h&&h<60){r=c;g=x;b=0;}
-    else if(60<=h&&h<120){r=x;g=c;b=0;}
-    else if(120<=h&&h<180){r=0;g=c;b=x;}
-    else if(180<=h&&h<240){r=0;g=x;b=c;}
-    else if(240<=h&&h<300){r=x;g=0;b=c;}
-    else{r=c;g=0;b=x;}
-    return {r:Math.round((r+m)*255),g:Math.round((g+m)*255),b:Math.round((b+m)*255)};
-  }
-
-  function rgbToHex(r,g,b){
-    const toHex=n=>n.toString(16).padStart(2,'0');
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
-  }
-
-  function hexToRgb(hex){
-    let h=(hex||'').trim().replace('#','');
-    if(h.length===3) h=h.split('').map(x=>x+x).join('');
-    if(!/^[0-9a-fA-F]{6}$/.test(h)) return null;
-    const n=parseInt(h,16);
-    return {r:(n>>16)&255,g:(n>>8)&255,b:n&255};
-  }
-
-  function rgbToHsv(r,g,b){
-    r/=255;g/=255;b/=255;
-    const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;
-    let h=0,s=max===0?0:d/max,v=max;
-    if(d!==0){
-      if(max===r) h=60*(((g-b)/d)%6);
-      else if(max===g) h=60*((b-r)/d+2);
-      else h=60*((r-g)/d+4);
-    }
-    if(h<0) h+=360;
-    return {h,s,v};
-  }
-
-  function drawSV(){
-    const ctx=sv.getContext('2d');
-    const w=sv.width=sv.clientWidth;
-    const h=sv.height=sv.clientHeight;
-
-    const pure=hsvToRgb(hsv.h,1,1);
-    ctx.fillStyle=`rgb(${pure.r},${pure.g},${pure.b})`;
-    ctx.fillRect(0,0,w,h);
-
-    const white=ctx.createLinearGradient(0,0,w,0);
-    white.addColorStop(0,'#ffffff');
-    white.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=white;
-    ctx.fillRect(0,0,w,h);
-
-    const black=ctx.createLinearGradient(0,0,0,h);
-    black.addColorStop(0,'rgba(0,0,0,0)');
-    black.addColorStop(1,'#000000');
-    ctx.fillStyle=black;
-    ctx.fillRect(0,0,w,h);
-
-    svCursor.style.left=`${hsv.s*w}px`;
-    svCursor.style.top=`${(1-hsv.v)*h}px`;
-  }
-
-  function updateOutputs(){
-    const {r,g,b}=hsvToRgb(hsv.h,hsv.s,hsv.v);
-    const hex=rgbToHex(r,g,b);
-    preview.style.background=hex;
-    hexInput.value=hex;
-    hue.value=Math.round(hsv.h);
-    drawSV();
-  }
-
-  function setFromHex(hex){
-    const rgb=hexToRgb(hex);
-    if(!rgb){showToast('HEX 格式錯誤');return;}
-    const next=rgbToHsv(rgb.r,rgb.g,rgb.b);
-    hsv.h=next.h;
-    hsv.s=next.s;
-    hsv.v=next.v;
-    updateOutputs();
-  }
-
-  function xyToSV(clientX,clientY){
-    const rect=sv.getBoundingClientRect();
-    const x=clamp(clientX-rect.left,0,rect.width);
-    const y=clamp(clientY-rect.top,0,rect.height);
-    hsv.s=x/rect.width;
-    hsv.v=1-y/rect.height;
-    updateOutputs();
-  }
-
-  let dragging=false;
-  function startDrag(e){
-    dragging=true;
-    const p=e.touches?e.touches[0]:e;
-    xyToSV(p.clientX,p.clientY);
-  }
-  function moveDrag(e){
-    if(!dragging)return;
-    const p=e.touches?e.touches[0]:e;
-    xyToSV(p.clientX,p.clientY);
-    e.preventDefault();
-  }
-  function endDrag(){dragging=false;}
-
-  svWrap.addEventListener('mousedown',startDrag);
-  window.addEventListener('mousemove',moveDrag);
-  window.addEventListener('mouseup',endDrag);
-  svWrap.addEventListener('touchstart',startDrag,{passive:false});
-  window.addEventListener('touchmove',moveDrag,{passive:false});
-  window.addEventListener('touchend',endDrag);
-
-  hue.addEventListener('input',()=>{
-    hsv.h=Number(hue.value);
-    updateOutputs();
-  });
-
-  hexInput.addEventListener('input',()=>{
-    const raw=hexInput.value.trim();
-    const valid=/^#?[0-9a-fA-F]{6}$/.test(raw) || /^#?[0-9a-fA-F]{3}$/.test(raw) || raw==='' || raw==='#';
-    hexInput.style.borderColor=valid?'var(--border)':'#ef4444';
-  });
-
-  function commitHexInput(){
-    const raw=hexInput.value.trim();
-    if(/^#?[0-9a-fA-F]{6}$/.test(raw) || /^#?[0-9a-fA-F]{3}$/.test(raw)){
-      setFromHex(raw);
-      hexInput.style.borderColor='var(--border)';
-    }else{
-      hexInput.value=rgbToHex(...Object.values(hsvToRgb(hsv.h,hsv.s,hsv.v)));
-      hexInput.style.borderColor='var(--border)';
-      showToast('HEX 格式錯誤');
-    }
-  }
-
-  hexInput.addEventListener('change',commitHexInput);
-  hexInput.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){
-      e.preventDefault();
-      hexInput.blur();
-      commitHexInput();
-    }
-  });
-
-  $('#random').addEventListener('click',()=>{
-    hsv.h=Math.floor(Math.random()*360);
-    hsv.s=+(0.35+Math.random()*0.6).toFixed(2);
-    hsv.v=+(0.45+Math.random()*0.5).toFixed(2);
-    updateOutputs();
-  });
-
-  function showToast(msg){
-    toast.textContent=msg;
-    toast.classList.add('show');
-    setTimeout(()=>toast.classList.remove('show'),1200);
-  }
-
-  window.addEventListener('resize',drawSV);
-  updateOutputs();
+  const send=(type,args)=>parent.postMessage({__runnerConsole:true,type,args:Array.from(args).map(v=>{try{return typeof v==='string'?v:JSON.stringify(v)}catch{return String(v)}})},'*');
+  ['log','warn','error','info'].forEach(type=>{const old=console[type]; console[type]=function(){send(type,arguments); old&&old.apply(console,arguments)}});
+  window.addEventListener('error',e=>send('error',[e.message+' @ '+(e.filename||'inline')+':'+e.lineno+':'+e.colno]));
+  window.addEventListener('unhandledrejection',e=>send('error',['Unhandled Promise: '+(e.reason&&e.reason.stack||e.reason)]));
 })();
-</script></body>
+<\/script>`;
+    if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, bridge + '</body>');
+    return html + bridge;
+  }
+
+  function runHtml(html, label = '單檔模式'){
+    revokeOldUrls();
+    clearConsole();
+    lastRenderedHtml = injectConsoleBridge(html);
+    preview.srcdoc = lastRenderedHtml;
+    fileInfo.textContent = label;
+    closeEditor();
+  }
+
+  function runSingleFile(){
+    saveDraft();
+    runHtml(code.value, '單檔模式');
+    showStatus('已運行單檔 HTML');
+  }
+
+  function downloadHtml(){
+    const blob = new Blob([code.value], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showStatus('已下載 HTML');
+  }
+
+  function openPreviewWindow(){
+    const html = lastRenderedHtml || injectConsoleBridge(code.value);
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+  }
+
+  function toggleFullscreen(){
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+
+  function toggleConsole(force){
+    const show = typeof force === 'boolean' ? force : consoleBox.style.display !== 'block';
+    consoleBox.style.display = show ? 'block' : 'none';
+  }
+  function clearConsole(){ consoleLines.innerHTML = ''; }
+  function addConsole(type, args){
+    const line = document.createElement('div');
+    line.className = 'log-line log-' + (type || 'log');
+    line.textContent = `[${type}] ` + args.join(' ');
+    consoleLines.appendChild(line);
+    consoleLines.scrollTop = consoleLines.scrollHeight;
+    if (type === 'error') toggleConsole(true);
+  }
+  window.addEventListener('message', e => {
+    if (e.data && e.data.__runnerConsole) addConsole(e.data.type, e.data.args || []);
+  });
+
+  function isExternalUrl(value){
+    return !value || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(value.trim());
+  }
+  function cleanPath(path){ return path.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+/g, '/'); }
+  function dirname(path){ const p = cleanPath(path); const i = p.lastIndexOf('/'); return i >= 0 ? p.slice(0, i + 1) : ''; }
+  function resolvePath(baseDir, target){
+    if (isExternalUrl(target)) return null;
+    const noQuery = target.split('#')[0].split('?')[0];
+    const suffix = target.slice(noQuery.length);
+    const raw = cleanPath(baseDir + noQuery);
+    const parts = [];
+    raw.split('/').forEach(part => {
+      if (!part || part === '.') return;
+      if (part === '..') parts.pop();
+      else parts.push(part);
+    });
+    return { path: parts.join('/'), suffix };
+  }
+  function mimeFromName(name){
+    const ext = name.split('.').pop().toLowerCase();
+    return { html:'text/html', htm:'text/html', css:'text/css', js:'text/javascript', mjs:'text/javascript', json:'application/json', svg:'image/svg+xml', png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif', webp:'image/webp', ico:'image/x-icon', wav:'audio/wav', mp3:'audio/mpeg', mp4:'video/mp4', webm:'video/webm', woff:'font/woff', woff2:'font/woff2', ttf:'font/ttf', otf:'font/otf' }[ext] || 'application/octet-stream';
+  }
+  function rewriteCssUrls(cssText, cssDir, urlMap){
+    return cssText.replace(/url\(([^)]+)\)/gi, (match, raw) => {
+      let value = raw.trim().replace(/^['"]|['"]$/g, '');
+      if (isExternalUrl(value) || value.startsWith('data:')) return match;
+      const resolved = resolvePath(cssDir, value);
+      if (!resolved) return match;
+      const blob = urlMap.get(resolved.path);
+      return blob ? `url("${blob}${resolved.suffix}")` : match;
+    });
+  }
+
+  async function buildProjectFromZip(file){
+    if (!window.JSZip) throw new Error('JSZip 載入失敗，請確認目前有網路。');
+    revokeOldUrls();
+    clearConsole();
+    const zip = await JSZip.loadAsync(file);
+    const entries = Object.values(zip.files).filter(f => !f.dir && !f.name.includes('__MACOSX/'));
+    const names = entries.map(f => cleanPath(f.name));
+    let indexName = names.find(n => /(^|\/)index\.html?$/i.test(n));
+    if (!indexName) indexName = names.find(n => /\.html?$/i.test(n));
+    if (!indexName) throw new Error('ZIP 裡找不到 HTML 入口檔。');
+
+    const fileMap = new Map();
+    for (const entry of entries) {
+      const name = cleanPath(entry.name);
+      const ext = name.split('.').pop().toLowerCase();
+      if (['html','htm','css','js','mjs','json','txt','svg','xml'].includes(ext)) fileMap.set(name, await entry.async('text'));
+      else fileMap.set(name, await entry.async('blob'));
+    }
+
+    const urlMap = new Map();
+    for (const [name, content] of fileMap.entries()) {
+      const ext = name.split('.').pop().toLowerCase();
+      if (['html','htm','css'].includes(ext)) continue;
+      const blob = content instanceof Blob ? content : new Blob([content], {type: mimeFromName(name)});
+      const url = URL.createObjectURL(blob); activeObjectUrls.push(url); urlMap.set(name, url);
+    }
+    for (const [name, content] of fileMap.entries()) {
+      if (!/\.css$/i.test(name)) continue;
+      const rewrittenCss = rewriteCssUrls(String(content), dirname(name), urlMap);
+      const url = URL.createObjectURL(new Blob([rewrittenCss], {type:'text/css'}));
+      activeObjectUrls.push(url); urlMap.set(name, url);
+    }
+
+    const indexDir = dirname(indexName);
+    const doc = new DOMParser().parseFromString(String(fileMap.get(indexName)), 'text/html');
+    function rewriteAttr(selector, attr, baseDir = indexDir){
+      doc.querySelectorAll(selector).forEach(el => {
+        const value = el.getAttribute(attr);
+        const resolved = resolvePath(baseDir, value || '');
+        if (!resolved) return;
+        const blob = urlMap.get(resolved.path);
+        if (blob) el.setAttribute(attr, blob + resolved.suffix);
+      });
+    }
+    rewriteAttr('script[src]', 'src');
+    rewriteAttr('link[href]', 'href');
+    rewriteAttr('img[src], audio[src], video[src], source[src], iframe[src]', 'src');
+    rewriteAttr('[poster]', 'poster');
+    doc.querySelectorAll('[srcset]').forEach(el => {
+      const srcset = el.getAttribute('srcset') || '';
+      const next = srcset.split(',').map(part => {
+        const pieces = part.trim().split(/\s+/);
+        const resolved = resolvePath(indexDir, pieces[0]);
+        if (resolved && urlMap.has(resolved.path)) pieces[0] = urlMap.get(resolved.path) + resolved.suffix;
+        return pieces.join(' ');
+      }).join(', ');
+      el.setAttribute('srcset', next);
+    });
+    const output = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    return { html: output, entry: indexName, count: entries.length };
+  }
+
+  async function runZipFile(file){
+    try {
+      showStatus('正在讀取 ZIP...');
+      const project = await buildProjectFromZip(file);
+      lastRenderedHtml = injectConsoleBridge(project.html);
+      preview.srcdoc = lastRenderedHtml;
+      closeEditor();
+      fileInfo.textContent = `ZIP：${project.entry}｜${project.count} 個檔案`;
+      showStatus(`已運行 ZIP：${project.entry}，共 ${project.count} 個檔案`);
+    } catch (err) {
+      console.error(err);
+      alert('ZIP 運行失敗：' + (err.message || err));
+    } finally { zipInput.value = ''; }
+  }
+
+  zipInput.addEventListener('change', e => { const file = e.target.files && e.target.files[0]; if (file) runZipFile(file); });
+  htmlInput.addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    code.value = await file.text();
+    saveDraft(); updateInfo(); runSingleFile(); htmlInput.value = '';
+  });
+
+  code.addEventListener('input', () => {
+    saveDraft(); updateInfo();
+    if (autoRun.checked) { clearTimeout(code.autoTimer); code.autoTimer = setTimeout(runSingleFile, 700); }
+  });
+  autoRun.addEventListener('change', () => localStorage.setItem(AUTO_KEY, autoRun.checked ? '1' : '0'));
+
+  code.addEventListener('keydown', e => {
+    if (e.key === 'Tab') { e.preventDefault(); const s=code.selectionStart, t=code.selectionEnd; code.value=code.value.slice(0,s)+'  '+code.value.slice(t); code.selectionStart=code.selectionEnd=s+2; saveDraft(); updateInfo(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runSingleFile(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); downloadHtml(); }
+  });
+
+  ['dragenter','dragover'].forEach(type => window.addEventListener(type, e => { e.preventDefault(); dropHint.style.display = 'grid'; }));
+  ['dragleave','drop'].forEach(type => window.addEventListener(type, e => { e.preventDefault(); if (type === 'dragleave' && e.target !== document.documentElement) return; dropHint.style.display = 'none'; }));
+  window.addEventListener('drop', async e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    if (/\.zip$/i.test(file.name)) return runZipFile(file);
+    if (/\.html?$/i.test(file.name)) { code.value = await file.text(); saveDraft(); updateInfo(); runSingleFile(); }
+    else alert('目前支援拖曳 ZIP 或 HTML 檔。');
+  });
+
+  updateInfo();
+  runSingleFile();
+</script>
+</body>
 </html>
